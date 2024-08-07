@@ -1,4 +1,4 @@
-<template>
+properties <template>
     <div class="card">
         <div class="font-semibold text-xl mb-4">Filtering</div>
         <DataTable
@@ -7,15 +7,18 @@
             :rows="20"
             dataKey="id"
             :rowHover="true"
-            v-model:filters="filters1"
             v-model:selection="selectedTorrents"
+            v-model:filters="filters"
             selectionMode="multiple"
+            sortMode="multiple"
+            size="small"
             filterDisplay="menu"
             :loading="loading1"
-            :filters="filters1"
-            :globalFilterFields="['name', 'country.name', 'representative.name', 'balance', 'status']"
+            :globalFilterFields="['name', 'downloadDir']"
             v-model:expandedRows="expandedRows"
         >
+        <!-- :filters="filters" -->
+
             <template #header>
                 <div class="flex justify-between">
                     <Button v-for="b in buttons" :icon="b.icon" :severity="b.severity" text rounded :aria-label="b.label"/>
@@ -26,7 +29,7 @@
                         <InputIcon>
                             <i class="pi pi-search" />
                         </InputIcon>
-                        <InputText v-model="filters1['global'].value" placeholder="Keyword Search" />
+                        <InputText v-model="filters['global'].value" placeholder="Keyword Search" />
                     </IconField>                    
                 </div>
             </template>
@@ -34,80 +37,95 @@
             <template #loading> Loading customers data. Please wait. </template>
             <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
             <Column expander style="width: 5rem" />
-            <Column field="name" header="Name" style="min-width: 12rem">
+            <Column field="name" header="名称" sortable style="min-width: 12rem">
                 <template #body="{ data }">
                     {{ data.name }}
+                </template>
+                <template #filter="{ filterModel }">
+                    <InputText v-model="filterModel.value" sortable type="text" placeholder="Search by name" />
+                </template>
+            </Column>
+            
+            <Column field="trackers" header="PT站" sortable style="min-width: 12rem">
+                <template #body="{ data }">
+                    {{ siteNameToPTname(data.trackers[0].sitename) }}
+                </template>
+                <template #filter="{ filterModel }">
+                    <InputText v-model="filterModel.value" type="text" placeholder="Search by PT站" />
+                </template>
+            </Column>
+            
+            
+            <Column field="addedDate" header="完成时间" sortable style="min-width: 12rem">
+                <template #body="{ data }">
+                    {{ formatTimestamp(data.addedDate) }}
+                </template>
+                <template #filter="{ filterModel }">
+                    <InputText v-model="filterModel.value" type="text" placeholder="Search by PT站" />
+                </template>
+            </Column>
+            
+            <Column field="peersGettingFromUs" header="下载数" dataType="numeric" sortable style="min-width: 10rem">
+                <template #body="{ data }">
+                    {{ data.peersGettingFromUs }}
+                </template>
+                <!-- <template #filter="{ filterModel }">
+                    <InputNumber v-model="filterModel.value" mode="currency" currency="USD" locale="en-US" />
+                </template> -->
+            </Column>
+            <Column field="trackerStats" header="做种数" dataType="numeric" sortable style="min-width: 10rem">
+                <template #body="{ data }">
+                    {{ data.trackerStats[0].seederCount }}
+                </template>
+                <!-- <template #filter="{ filterModel }">
+                    <InputNumber v-model="filterModel.value" mode="currency" currency="USD" locale="en-US" />
+                </template> -->
+            </Column>
+            <Column field="activityDate" header="最后活跃时间" sortable style="min-width: 12rem">
+                <template #body="{ data }">
+                    {{ formatTimestamp(data.activityDate) }}
+                </template>
+                <template #filter="{ filterModel }">
+                    <InputText v-model="filterModel.value" type="text" placeholder="Search by PT站" />
+                </template>
+            </Column>
+            <Column field="downloadDir" header="路径" sortable style="min-width: 12rem">
+                <template #body="{ data }">
+                    {{ data.downloadDir }}
+                </template>
+                <!-- <template #filter="{ filterModel }">
+                    <InputText v-model="filterModel.value" type="text" placeholder="Search by downloadDir" />
+                </template> -->
+            </Column>
+            <Column field="uploadedEver" header="已上传" sortable style="min-width: 12rem">
+                <template #body="{ data }">
+                    {{ formatSize(data.uploadedEver, false) }}
+                </template>
+                <template #filter="{ filterModel }">
+                    <InputText v-model="filterModel.value" type="text" placeholder="Search by 已上传" />
+                </template>
+            </Column>
+            <Column field="rateUpload" header="上传速度" sortable style="min-width: 12rem">
+                <template #body="{ data }">
+                    {{ formatSize(data.rateUpload, true) }}
+                </template>
+                <template #filter="{ filterModel }">
+                    <InputText v-model="filterModel.value" type="text" placeholder="Search by 上传速度" />
+                </template>
+            </Column>
+            
+            <Column field="totalSize" header="总大小" sortable style="min-width: 12rem">
+                <template #body="{ data }">
+                    {{ formatSize(data.totalSize, false) }}
                 </template>
                 <template #filter="{ filterModel }">
                     <InputText v-model="filterModel.value" type="text" placeholder="Search by name" />
                 </template>
             </Column>
-            <Column header="Country" filterField="country.name" style="min-width: 12rem">
+            
+            <Column field="percentDone" header="进度" :showFilterMatchModes="false" sortable style="min-width: 12rem">
                 <template #body="{ data }">
-                    <div class="flex items-center gap-2">
-                        <img alt="flag" src="https://primefaces.org/cdn/primevue/images/flag/flag_placeholder.png" :class="`flag flag-${data.country.code}`" style="width: 24px" />
-                        <span>{{ data.country.name }}</span>
-                    </div>
-                </template>
-                <template #filter="{ filterModel }">
-                    <InputText v-model="filterModel.value" type="text" placeholder="Search by country" />
-                </template>
-                <template #filterclear="{ filterCallback }">
-                    <Button type="button" icon="pi pi-times" @click="filterCallback()" severity="secondary"></Button>
-                </template>
-                <template #filterapply="{ filterCallback }">
-                    <Button type="button" icon="pi pi-check" @click="filterCallback()" severity="success"></Button>
-                </template>
-            </Column>
-            <Column header="Agent" filterField="representative" :showFilterMatchModes="false" :filterMenuStyle="{ width: '14rem' }" style="min-width: 14rem">
-                <template #body="{ data }">
-                    <div class="flex items-center gap-2">
-                        <img :alt="data.representative.name" :src="`https://primefaces.org/cdn/primevue/images/avatar/${data.representative.image}`" style="width: 32px" />
-                        <span>{{ data.representative.name }}</span>
-                    </div>
-                </template>
-                <template #filter="{ filterModel }">
-                    <MultiSelect v-model="filterModel.value" :options="representatives" optionLabel="name" placeholder="Any">
-                        <template #option="slotProps">
-                            <div class="flex items-center gap-2">
-                                <img :alt="slotProps.option.name" :src="`https://primefaces.org/cdn/primevue/images/avatar/${slotProps.option.image}`" style="width: 32px" />
-                                <span>{{ slotProps.option.name }}</span>
-                            </div>
-                        </template>
-                    </MultiSelect>
-                </template>
-            </Column>
-            <Column header="Date" filterField="date" dataType="date" style="min-width: 10rem">
-                <template #body="{ data }">
-                    {{ formatDate(data.date) }}
-                </template>
-                <template #filter="{ filterModel }">
-                    <DatePicker v-model="filterModel.value" dateFormat="mm/dd/yy" placeholder="mm/dd/yyyy" />
-                </template>
-            </Column>
-            <Column header="Balance" filterField="balance" dataType="numeric" style="min-width: 10rem">
-                <template #body="{ data }">
-                    {{ formatCurrency(data.balance) }}
-                </template>
-                <template #filter="{ filterModel }">
-                    <InputNumber v-model="filterModel.value" mode="currency" currency="USD" locale="en-US" />
-                </template>
-            </Column>
-            <Column header="Status" field="status" :filterMenuStyle="{ width: '14rem' }" style="min-width: 12rem">
-                <template #body="{ data }">
-                    <Tag :value="data.status" :severity="getSeverity(data.status)" />
-                </template>
-                <template #filter="{ filterModel }">
-                    <Select v-model="filterModel.value" :options="statuses" placeholder="Select One" showClear>
-                        <template #option="slotProps">
-                            <Tag :value="slotProps.option" :severity="getSeverity(slotProps.option)" />
-                        </template>
-                    </Select>
-                </template>
-            </Column>
-            <Column field="activity" header="Activity" :showFilterMatchModes="false" style="min-width: 12rem">
-                <template #body="{ data }">
-                    <ProgressBar :value="data.activity" :showValue="false" style="height: 6px"></ProgressBar>
+                    <ProgressBar :value="data.percentDone*100" :showValue="false" style="height: 6px"></ProgressBar>
                 </template>
                 <template #filter="{ filterModel }">
                     <Slider v-model="filterModel.value" range class="m-4"></Slider>
@@ -117,42 +135,32 @@
                     </div>
                 </template>
             </Column>
-            <Column field="verified" header="Verified" dataType="boolean" bodyClass="text-center" style="min-width: 8rem">
+
+            <!-- <Column header="addedDate" filterField="addedDate" dataType="date" style="min-width: 10rem">
                 <template #body="{ data }">
-                    <i class="pi" :class="{ 'pi-check-circle text-green-500 ': data.verified, 'pi-times-circle text-red-500': !data.verified }"></i>
+                    {{ formatDate(data.addedDate) }}
                 </template>
                 <template #filter="{ filterModel }">
-                    <label for="verified-filter" class="font-bold"> Verified </label>
-                    <Checkbox v-model="filterModel.value" :indeterminate="filterModel.value === null" binary inputId="verified-filter" />
+                    <DatePicker v-model="filterModel.value" dateFormat="mm/dd/yy" placeholder="mm/dd/yyyy" />
                 </template>
-            </Column>
+            </Column> -->
             <template #expansion="slotProps">
-                <div class="p-4 ">
-                    <h5>Orders for {{ slotProps }}</h5>
-                    <div class="flex justify-center mb-6">
-                        <SelectButton v-model="torrentInfo" :options="torrentInfoOptions" optionLabel="label" dataKey="label" />
-                    </div>                    
-                    <DataTable :value="slotProps.data.orders">
-                        <Column field="id" header="Id" sortable></Column>
-                        <Column field="customer" header="Customer" sortable></Column>
-                        <Column field="date" header="Date" sortable></Column>
-                        <Column field="amount" header="Amount" sortable>
-                            <template #body="slotProps">
-                                {{ formatCurrency(slotProps.data.amount) }}
-                            </template>
-                        </Column>
-                        <Column field="status" header="Status" sortable>
-                            <template #body="slotProps">
-                                <Tag :value="slotProps.data.status.toLowerCase()" :severity="getOrderSeverity(slotProps.data)" />
-                            </template>
-                        </Column>
-                        <Column headerStyle="width:4rem">
-                            <template #body>
-                                <Button icon="pi pi-search" />
-                            </template>
-                        </Column>
-                    </DataTable>
-                </div>
+                <Tabs value="0">
+                    <TabList>
+                        <Tab v-for="tab in items" :value="tab.value">
+                            <i :class="tab.icon" />
+                            {{ tab.label }}
+                            <!-- <span class="material-icons">rocket_launch</span> -->
+                        </Tab>
+                    </TabList>
+                    <TabPanels>
+                        <TabPanel v-for="pan in items" :value="pan.value">
+                            <!-- <component :is="pan.component"></component> -->
+                            {{ pan.label }}
+                            <FloatingConfigurator/>
+                        </TabPanel>
+                    </TabPanels>
+                </Tabs>
             </template>
 
         </DataTable>
@@ -160,10 +168,21 @@
 </template>
 
 <script setup>
-import { CustomerService } from '@/service/CustomerService';
+// import { FileTree } from '@/components/FileTrees.vue';
+import FloatingConfigurator from '@/components/FloatingConfigurator.vue';
+
 import { ProductService } from '@/service/ProductService';
+import { TransmissionRPC } from '@/service/TransmissionRPC';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
-import { onBeforeMount, reactive, ref } from 'vue';
+import { onBeforeMount, ref } from 'vue';
+
+const items = ref([
+    {label:'常规', value:"0", icon: 'pi pi-box', component: null},
+    {label:'服务器', value:"1", icon: 'pi pi-server', component: null},
+    {label:'文件', value:"2", icon: 'pi pi-folder-open', component: null},
+    {label:'用户', value:"3", icon: 'pi pi-user', component: null},
+    {label:'设置', value:"4", icon: 'pi pi-cog', component: null},
+]);
 
 const buttons = ref([ 
     // {label:'添加种子', icon:'pi pi-plus', severity:''}, //severity决定颜色
@@ -185,111 +204,53 @@ const selectedTorrents = ref();
 const op2 = ref(null);
 
 const torrents = ref(null);
-const customers2 = ref(null);
-const customers3 = ref(null);
-const filters1 = ref(null);
+const filters = ref(null);
 const loading1 = ref(null);
-const balanceFrozen = ref(false);
 const products = ref(null);
 const expandedRows = ref([]);
-const statuses = reactive(['unqualified', 'qualified', 'new', 'negotiation', 'renewal', 'proposal']);
-const representatives = reactive([
-    { name: 'Amy Elsner', image: 'amyelsner.png' },
-    { name: 'Anna Fali', image: 'annafali.png' },
-    { name: 'Asiya Javayant', image: 'asiyajavayant.png' },
-    { name: 'Bernardo Dominic', image: 'bernardodominic.png' },
-    { name: 'Elwin Sharvill', image: 'elwinsharvill.png' },
-    { name: 'Ioni Bowcher', image: 'ionibowcher.png' },
-    { name: 'Ivan Magalhaes', image: 'ivanmagalhaes.png' },
-    { name: 'Onyama Limba', image: 'onyamalimba.png' },
-    { name: 'Stephen Shaw', image: 'stephenshaw.png' },
-    { name: 'XuXue Feng', image: 'xuxuefeng.png' }
-]);
-
-const getOrderSeverity = (order) => {
-    switch (order.status) {
-        case 'DELIVERED':
-            return 'success';
-
-        case 'CANCELLED':
-            return 'danger';
-
-        case 'PENDING':
-            return 'warn';
-
-        case 'RETURNED':
-            return 'info';
-
-        default:
-            return null;
-    }
-};
-
-const toggleDataTable = (event) => {
-    op2.value.toggle(event);
-};
-
-const getSeverity = (status) => {
-    switch (status) {
-        case 'unqualified':
-            return 'danger';
-
-        case 'qualified':
-            return 'success';
-
-        case 'new':
-            return 'info';
-
-        case 'negotiation':
-            return 'warn';
-
-        case 'renewal':
-            return null;
-    }
-};
-
-const getStockSeverity = (product) => {
-    switch (product.inventoryStatus) {
-        case 'INSTOCK':
-            return 'success';
-
-        case 'LOWSTOCK':
-            return 'warn';
-
-        case 'OUTOFSTOCK':
-            return 'danger';
-
-        default:
-            return null;
-    }
-};
 
 onBeforeMount(() => {
     ProductService.getProductsWithOrdersSmall().then((data) => (products.value = data));
-    CustomerService.getCustomersLarge().then((data) => {
-        torrents.value = data;
-        loading1.value = false;
-        torrents.value.forEach((customer) => (customer.date = new Date(customer.date)));
-    });
-    CustomerService.getCustomersLarge().then((data) => (customers2.value = data));
-    CustomerService.getCustomersMedium().then((data) => (customers3.value = data));
+    // CustomerService.getCustomersLarge().then((data) => {
+    //     torrents.value = data;
+    //     loading1.value = false;
+    //     // torrents.value.forEach((customer) => (customer.date = new Date(customer.date)));
+    // });
+    TransmissionRPC.setServer()
+        .then(async (response) => {
+            await TransmissionRPC.getTorrents()
+            .then((res) => {
+                console.log('res', res)
+                torrents.value = res.torrents;
+                // console.log('torrent:', torrents)
+            })
+            .catch((err) => {
+                console.log('err', err)
+            })          
 
-    initFilters1();
+        })
+        .catch((error) => {
+          if(error.message){
+            console.log('setServer, err', error)
+          }
+        })
+
+    initFilters();
 });
 const clearFilter = () => {
-    initFilters1();
+    initFilters();
 };
-const initFilters1 = () => {
-    filters1.value = {
+const initFilters = () => {
+    filters.value = {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
         name: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-        'country.name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-        representative: { value: null, matchMode: FilterMatchMode.IN },
-        date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
-        balance: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
-        status: { operator: FilterOperator.OR, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
-        activity: { value: [0, 100], matchMode: FilterMatchMode.BETWEEN },
-        verified: { value: null, matchMode: FilterMatchMode.EQUALS }
+        // 'country.name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        // representative: { value: null, matchMode: FilterMatchMode.IN },
+        // date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
+        // balance: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
+        // status: { operator: FilterOperator.OR, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
+        // activity: { value: [0, 100], matchMode: FilterMatchMode.BETWEEN },
+        // verified: { value: null, matchMode: FilterMatchMode.EQUALS }
     };
 };
 
@@ -305,6 +266,58 @@ const formatCurrency = (value) => {
     return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 };
 
+const formatSize = (bytes, speed) => {
+    const units = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    let unitIndex = 0;
+    while (bytes >= 1024 && unitIndex < units.length - 1) {
+        bytes /= 1024;
+        unitIndex++;
+    }
+    if(speed){
+        return `${bytes.toFixed(2)} ${units[unitIndex]}/s`;
+    } 
+    return `${bytes.toFixed(2)} ${units[unitIndex]}`;
+}
+
+const formatTimestamp = (timestamp) => {
+    const date = new Date(timestamp * 1000); // 转换为毫秒
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+const siteNameToPTname = (a) =>{
+    var site2PT = {
+        "hdkylin": "麒麟",
+        "hdkyl": "麒麟",
+        "rousi":"肉丝",
+        "icc2022":"冰淇淋",
+        "czhch":"冰淇淋",
+        "carpt":"车站",
+        "jptv":"JPTV",
+        "hamsters": "蝴蝶",
+        "m-team": "馒头",
+        "piggo": "猪猪",
+        "pttime": "PTT",
+        "xingtan": "杏坛",
+        "gtk": "GTK",
+        "nextpt": "飞天拉面",
+        "connects":"飞天拉面",
+        "crabpt": "蟹黄堡",
+        "ubits": "U堡",
+        "0ff": "农场",
+        "btschool": "学校"
+    }
+    var pt = site2PT.hasOwnProperty(a) ? site2PT[a] : a;
+    return pt
+}
+
+
 const formatDate = (value) => {
     return value.toLocaleDateString('en-US', {
         day: '2-digit',
@@ -313,18 +326,6 @@ const formatDate = (value) => {
     });
 };
 
-const calculateCustomerTotal = (name) => {
-    let total = 0;
-    if (customers3.value) {
-        for (let customer of customers3.value) {
-            if (customer.representative.name === name) {
-                total++;
-            }
-        }
-    }
-
-    return total;
-};
 </script>
 
 <style scoped lang="scss">

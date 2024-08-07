@@ -152,10 +152,9 @@ const calculateCustomerTotal = (name) => {
             :rows="10"
             dataKey="id"
             :rowHover="true"
-            v-model:filters="filters1"
             filterDisplay="menu"
             :loading="loading1"
-            :filters="filters1"
+            v-model:filters="filters1"
             :globalFilterFields="['name', 'country.name', 'representative.name', 'balance', 'status']"
             showGridlines
         >
