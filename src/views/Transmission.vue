@@ -1,4 +1,4 @@
-properties <template>
+<template>
     <div class="card">
         <div class="font-semibold text-xl mb-4">Filtering</div>
         <DataTable
@@ -45,6 +45,14 @@ properties <template>
                     <InputText v-model="filterModel.value" sortable type="text" placeholder="Search by name" />
                 </template>
             </Column>
+            <Column field="hashString" header="hash" sortable style="min-width: 12rem">
+                <template #body="{ data }">
+                    {{ data.hashString }}
+                </template>
+                <template #filter="{ filterModel }">
+                    <InputText v-model="filterModel.value" sortable type="text" placeholder="Search by hash" />
+                </template>
+            </Column>
             
             <Column field="trackers" header="PT站" sortable style="min-width: 12rem">
                 <template #body="{ data }">
@@ -54,8 +62,22 @@ properties <template>
                     <InputText v-model="filterModel.value" type="text" placeholder="Search by PT站" />
                 </template>
             </Column>
-            
-            
+            <Column field="labels" header="标签" sortable style="min-width: 12rem">
+                <template #body="{ data }">
+                    {{ data.labels }}
+                </template>
+                <template #filter="{ filterModel }">
+                    <InputText v-model="filterModel.value" type="text" placeholder="Search by label" />
+                </template>
+            </Column>
+            <Column field="status" header="状态" sortable style="min-width: 12rem">
+                <template #body="{ data }">
+                    {{ formatStatus(data.status) }}
+                </template>
+                <template #filter="{ filterModel }">
+                    <InputText v-model="filterModel.value" type="text" placeholder="Search by status" />
+                </template>
+            </Column>
             <Column field="addedDate" header="完成时间" sortable style="min-width: 12rem">
                 <template #body="{ data }">
                     {{ formatTimestamp(data.addedDate) }}
@@ -64,7 +86,6 @@ properties <template>
                     <InputText v-model="filterModel.value" type="text" placeholder="Search by PT站" />
                 </template>
             </Column>
-            
             <Column field="peersGettingFromUs" header="下载数" dataType="numeric" sortable style="min-width: 10rem">
                 <template #body="{ data }">
                     {{ data.peersGettingFromUs }}
@@ -105,6 +126,15 @@ properties <template>
                     <InputText v-model="filterModel.value" type="text" placeholder="Search by 已上传" />
                 </template>
             </Column>
+            <Column field="uploadRatio" header="分享率" dataType="numeric" sortable style="min-width: 10rem">
+                <template #body="{ data }">
+                    {{ data.uploadRatio }}
+                </template>
+                <!-- <template #filter="{ filterModel }">
+                    <InputNumber v-model="filterModel.value" mode="currency" currency="USD" locale="en-US" />
+                </template> -->
+            </Column>
+            
             <Column field="rateUpload" header="上传速度" sortable style="min-width: 12rem">
                 <template #body="{ data }">
                     {{ formatSize(data.rateUpload, true) }}
@@ -162,7 +192,6 @@ properties <template>
                     </TabPanels>
                 </Tabs>
             </template>
-
         </DataTable>
     </div>
 </template>
@@ -171,7 +200,6 @@ properties <template>
 // import { FileTree } from '@/components/FileTrees.vue';
 import FloatingConfigurator from '@/components/FloatingConfigurator.vue';
 
-import { ProductService } from '@/service/ProductService';
 import { TransmissionRPC } from '@/service/TransmissionRPC';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { onBeforeMount, ref } from 'vue';
@@ -193,29 +221,21 @@ const buttons = ref([
     {label:'删除任务', icon:'pi pi-trash', severity:'danger'},
     {label:'重新校验', icon:'pi pi-check-circle', severity:'secondary'}, 
 ]);
-const torrentInfo = ref({ label: '服务器', value: 'small' });
-const torrentInfoOptions = ref([
-    { label: '服务器', value: 'small' },
-    { label: '文件', value: 'null' },
-    { label: '用户', value: 'large' }
-]);
+// const torrentInfo = ref({ label: '服务器', value: 'small' });
+// const torrentInfoOptions = ref([
+//     { label: '服务器', value: 'small' },
+//     { label: '文件', value: 'null' },
+//     { label: '用户', value: 'large' }
+// ]);
 
 const selectedTorrents = ref();
-const op2 = ref(null);
 
 const torrents = ref(null);
 const filters = ref(null);
 const loading1 = ref(null);
-const products = ref(null);
 const expandedRows = ref([]);
 
 onBeforeMount(() => {
-    ProductService.getProductsWithOrdersSmall().then((data) => (products.value = data));
-    // CustomerService.getCustomersLarge().then((data) => {
-    //     torrents.value = data;
-    //     loading1.value = false;
-    //     // torrents.value.forEach((customer) => (customer.date = new Date(customer.date)));
-    // });
     TransmissionRPC.setServer()
         .then(async (response) => {
             await TransmissionRPC.getTorrents()
@@ -255,15 +275,11 @@ const initFilters = () => {
 };
 
 const expandAll = () => {
-    expandedRows.value = products.value.reduce((acc, p) => (acc[p.id] = true) && acc, {});
+    expandedRows.value = torrents.value.reduce((acc, p) => (acc[p.id] = true) && acc, {});
 };
 
 const collapseAll = () => {
     expandedRows.value = null;
-};
-
-const formatCurrency = (value) => {
-    return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 };
 
 const formatSize = (bytes, speed) => {
@@ -317,13 +333,22 @@ const siteNameToPTname = (a) =>{
     return pt
 }
 
-
-const formatDate = (value) => {
-    return value.toLocaleDateString('en-US', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
+const formatStatus = (value) => {
+    const statusMap = {
+        0: "暂停",// "stopped",
+        1: "等待校验",// "queued to verify local data",
+        2: "校验",// "verifying local data",
+        3: "等待下载",// "queued to download",
+        4: "下载",// "downloading",
+        5: "等待做种",// "queued to seed",
+        6: "做种",// "seeding"
+    }
+    const meaning = statusMap[value];
+    if (meaning !== undefined) {
+        return meaning;
+    } else {
+        return "Unknown status";
+    }
 };
 
 </script>

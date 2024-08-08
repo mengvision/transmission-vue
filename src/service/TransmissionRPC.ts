@@ -227,6 +227,8 @@ class TRPC {
         'peersGettingFromUs',
         'peersSendingToUs',
         'trackerStats',
+        'hashString',
+        'labels',
       ]
     }
     if(refresh) {
